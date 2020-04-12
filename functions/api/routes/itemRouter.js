@@ -1,20 +1,35 @@
 const express = require('express');
 const db = require('../model/firebase');
+const cors = require('cors');
 
 const itemRouter = express.Router();
+itemRouter.use(cors());
+// itemRouter.use((req, res, next) => {
+//   if (確認の条件)) {
+//     next();
+//   } else {
+//     throw new Error('Bad Key');
+//   }
+// });
 
 // Read All Item
 itemRouter.get('/', async (req, res, next) => {
   try {
     const itemSnapshot = await db.collection('latlng').get();
-    const items = [];
-    itemSnapshot.forEach(doc => {
-      items.push({
-        id: doc.id,
-        data: doc.data()
-      });
-    });
-    res.json(items);
+    // const items = [];
+    itemList = itemSnapshot.docs.map(x => {
+      return {
+        id: x.id,
+        data: x.data()
+      };
+    })
+    // itemSnapshot.forEach(doc => {
+    //   items.push({
+    //     id: doc.id,
+    //     data: doc.data()
+    //   });
+    // });
+    res.json(itemList);
   } catch (e) {
     next(e);
   }

@@ -7,7 +7,7 @@ const cors = require('cors');
 const itemRouter = require('./api/routes/itemRouter');
 
 const app = express();
-app.use(cors({ origin: true }));
+app.use(cors());
 
 // register routes
 app.use('/api/v1', itemRouter);
