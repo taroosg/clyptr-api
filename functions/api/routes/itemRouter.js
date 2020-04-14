@@ -1,6 +1,16 @@
 const express = require('express');
-const db = require('../model/firebase');
+const admin = require('../model/firebase');
 const cors = require('cors');
+const NodeGeocoder = require('node-geocoder');
+const db = admin.firestore();
+
+let options = {
+  provider: 'openstreetmap',
+  // apiKey: 'AIzaSyA1Xd3oiuXW_0dQxAi46m1GBzqnDnw8Xvo',
+};
+
+let geocoder = NodeGeocoder(options);
+
 
 const itemRouter = express.Router();
 itemRouter.use(cors());
@@ -15,9 +25,9 @@ itemRouter.use(cors());
 // Read All Item
 itemRouter.get('/', async (req, res, next) => {
   try {
-    const itemSnapshot = await db.collection('latlng').get();
+    const itemSnapshot = await db.collection('latlng').orderBy('timestamp', 'desc').get();
     // const items = [];
-    itemList = itemSnapshot.docs.map(x => {
+    items = itemSnapshot.docs.map(x => {
       return {
         id: x.id,
         data: x.data()
@@ -29,7 +39,7 @@ itemRouter.get('/', async (req, res, next) => {
     //     data: doc.data()
     //   });
     // });
-    res.json(itemList);
+    res.json(items);
   } catch (e) {
     next(e);
   }
@@ -58,19 +68,49 @@ itemRouter.get('/:id', async (req, res, next) => {
   }
 });
 
+// Read my Item
+itemRouter.get('/my/:uid', async (req, res, next) => {
+  try {
+    const itemSnapshot = await db.collection('latlng')
+      .where('user', '==', req.params.uid)
+      .orderBy('timestamp', 'desc')
+      .get();
+    items = itemSnapshot.docs.map(x => {
+      return {
+        id: x.id,
+        data: x.data()
+      };
+    })
+    res.json(items);
+  } catch (e) {
+    next(e);
+  }
+});
+
+
 // Create Item
 itemRouter.post('/', async (req, res, next) => {
   try {
-    const text = req.body.text;
-    if (!text) {
-      throw new Error('Text is blank');
+    const data = req.body;
+    if (!data) {
+      throw new Error('Data is blank');
     }
-    const data = { text };
-    const ref = await db.collection('latlng').add(data);
+
+    // 逆ジオコーディング
+    const address = await geocoder.reverse({ lat: data.position.lat, lon: data.position.lng })
+
+    // 送信
+    const postData = {
+      ...data,
+      address: address[0].formattedAddress,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    }
+    const ref = await db.collection('latlng').add(postData);
     res.json({
       id: ref.id,
       data
     });
+
   } catch (e) {
     next(e);
   }
@@ -80,25 +120,33 @@ itemRouter.post('/', async (req, res, next) => {
 itemRouter.put('/:id', async (req, res, next) => {
   try {
     const id = req.params.id;
-    const text = req.body.text;
+    const newData = req.body;
 
     if (!id) {
       throw new Error('id is blank');
     }
-    if (!text) {
-      throw new Error('text is blank');
+    if (!newData) {
+      throw new Error('data is blank');
     }
 
-    const data = { text };
+    // const data = { text };
     const ref = await db
       .collection('latlng')
       .doc(id)
       .update({
-        ...data
-      });
+        ...newData,
+        ...{ timestamp: admin.firestore.FieldValue.serverTimestamp() },
+      })
+    const newItem = await db
+      .collection('latlng')
+      .doc(id)
+      .get();
+    if (!newItem.exists) {
+      throw new Error('item does not exists');
+    }
     res.json({
-      id,
-      data
+      id: newItem.id,
+      data: newItem.data()
     });
   } catch (e) {
     next(e);
@@ -107,6 +155,7 @@ itemRouter.put('/:id', async (req, res, next) => {
 
 // Delete Item
 itemRouter.delete('/:id', async (req, res, next) => {
+  console.log(req.params.id)
   try {
     const id = req.params.id;
     if (!id) {
