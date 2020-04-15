@@ -6,7 +6,6 @@ const db = admin.firestore();
 
 let options = {
   provider: 'openstreetmap',
-  // apiKey: 'AIzaSyA1Xd3oiuXW_0dQxAi46m1GBzqnDnw8Xvo',
 };
 
 let geocoder = NodeGeocoder(options);
@@ -14,13 +13,6 @@ let geocoder = NodeGeocoder(options);
 
 const itemRouter = express.Router();
 itemRouter.use(cors());
-// itemRouter.use((req, res, next) => {
-//   if (確認の条件)) {
-//     next();
-//   } else {
-//     throw new Error('Bad Key');
-//   }
-// });
 
 // Read All Item
 itemRouter.get('/', async (req, res, next) => {
@@ -33,12 +25,6 @@ itemRouter.get('/', async (req, res, next) => {
         data: x.data()
       };
     })
-    // itemSnapshot.forEach(doc => {
-    //   items.push({
-    //     id: doc.id,
-    //     data: doc.data()
-    //   });
-    // });
     res.json(items);
   } catch (e) {
     next(e);
@@ -94,15 +80,6 @@ itemRouter.get('/followitem/:uid', async (req, res, next) => {
       .where('follow', '==', req.params.uid)
       .get();
     const follows = followlist.docs.map(x => x.data().follower)
-    console.log(follows);
-    // return
-    // const followItems = [...follows, req.params.uid].map(async x => {
-    //   const itemSnapshot = await db.collection('latlng')
-    //     .where('user', '==', x)
-    //     .orderBy('timestamp', 'desc')
-    //     .get();
-    //   return itemSnapshot.docs
-    // })
     const itemSnapshot = await db.collection('latlng')
       .where('user', 'in', [...follows, req.params.uid])
       .orderBy('timestamp', 'desc')
@@ -180,7 +157,6 @@ itemRouter.post('/', async (req, res, next) => {
 
     // 逆ジオコーディング
     const address = await geocoder.reverse({ lat: data.position.lat, lon: data.position.lng })
-
     // 送信
     const postData = {
       ...data,
@@ -190,7 +166,7 @@ itemRouter.post('/', async (req, res, next) => {
     const ref = await db.collection('latlng').add(postData);
     res.json({
       id: ref.id,
-      data: ref.data()
+      data: postData,
     });
 
   } catch (e) {
