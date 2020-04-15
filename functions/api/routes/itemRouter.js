@@ -87,6 +87,88 @@ itemRouter.get('/my/:uid', async (req, res, next) => {
   }
 });
 
+// Read follow item
+itemRouter.get('/followitem/:uid', async (req, res, next) => {
+  try {
+    const followlist = await db.collection('follow')
+      .where('follow', '==', req.params.uid)
+      .get();
+    const follows = followlist.docs.map(x => x.data().follower)
+    console.log(follows);
+    // return
+    // const followItems = [...follows, req.params.uid].map(async x => {
+    //   const itemSnapshot = await db.collection('latlng')
+    //     .where('user', '==', x)
+    //     .orderBy('timestamp', 'desc')
+    //     .get();
+    //   return itemSnapshot.docs
+    // })
+    const itemSnapshot = await db.collection('latlng')
+      .where('user', 'in', [...follows, req.params.uid])
+      .orderBy('timestamp', 'desc')
+      .get();
+    console.log(itemSnapshot)
+    // return
+    items = itemSnapshot.docs.map(x => {
+      return {
+        id: x.id,
+        data: x.data()
+      };
+    })
+    res.json(items);
+  } catch (e) {
+    next(e);
+  }
+});
+
+
+// Read follow list
+itemRouter.get('/followlist/:uid', async (req, res, next) => {
+  try {
+    const followsSnapshot = await db.collection('follow')
+      .where('follow', '==', req.params.uid)
+      .get();
+    const follows = followsSnapshot.docs.map(x => x.data().follower)
+    res.json(follows);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Create follow
+itemRouter.post('/follow', async (req, res, next) => {
+  try {
+    const data = req.body;
+    if (!data) {
+      throw new Error('Data is blank');
+    }
+    const ref = await db.collection('follow').add(data);
+    res.json({
+      id: ref.id,
+      data
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Unfollow
+itemRouter.post('/unfollow', async (req, res, next) => {
+  console.log(req.body);
+  try {
+    const targetItem = await db.collection('follow')
+      .where('follow', '==', req.body.follow)
+      .where('follower', '==', req.body.follower)
+      .get();
+    const removedItem = await targetItem.docs[0].ref.delete();
+    res.json({
+      id: targetItem.docs[0].ref.id,
+      data: req.body
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 
 // Create Item
 itemRouter.post('/', async (req, res, next) => {
@@ -108,7 +190,7 @@ itemRouter.post('/', async (req, res, next) => {
     const ref = await db.collection('latlng').add(postData);
     res.json({
       id: ref.id,
-      data
+      data: ref.data()
     });
 
   } catch (e) {
