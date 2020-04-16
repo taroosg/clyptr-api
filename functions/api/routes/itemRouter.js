@@ -84,7 +84,6 @@ itemRouter.get('/followitem/:uid', async (req, res, next) => {
       .where('user', 'in', [...follows, req.params.uid])
       .orderBy('timestamp', 'desc')
       .get();
-    console.log(itemSnapshot)
     // return
     items = itemSnapshot.docs.map(x => {
       return {
@@ -131,7 +130,6 @@ itemRouter.post('/follow', async (req, res, next) => {
 
 // Unfollow
 itemRouter.post('/unfollow', async (req, res, next) => {
-  console.log(req.body);
   try {
     const targetItem = await db.collection('follow')
       .where('follow', '==', req.body.follow)
@@ -213,7 +211,6 @@ itemRouter.put('/:id', async (req, res, next) => {
 
 // Delete Item
 itemRouter.delete('/:id', async (req, res, next) => {
-  console.log(req.params.id)
   try {
     const id = req.params.id;
     if (!id) {
